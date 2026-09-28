@@ -1,0 +1,19 @@
+# Local environment and caches
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.vscode/
+.env
+*.token
+*.log
+
+# Keep the public CSV and generated serialized model in the downloadable ZIP,
+# but do not stage them in GitHub by default.
+data/
+models/
+
+# OS files
+.DS_Store
+Thumbs.db

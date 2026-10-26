@@ -1,0 +1,210 @@
+FOOTBALL PLAYER RATING RESEARCH: PREVIOUS WORK AND PROPOSED EXTENSION
+
+Name: M.Rehan
+Class: BS Software Engineering, Semester 7
+Section: B (BSSE VII-B)
+Project data: EA Sports FIFA / FC male-player editions, 2015–2023
+Dataset source: https://www.kaggle.com/datasets/stefanoleone992/fifa-23-complete-player-dataset
+
+IMPORTANT DISTINCTION
+
+The published study summarized below and my current GitHub lab application do not
+predict the same target. The study predicts a three-year, binary high-potential
+label. My current lab script predicts a player's position group from a single
+edition (Defender, Forward, Goalkeeper, or Midfielder). The proposed research
+below would be a future project: it has not been implemented or validated by
+the current position-classification app. The published study uses the same
+Stefano Leone Kaggle source, but its cleaned 40,669-row research table is not
+the same processed table as my 161,583-row local CSV. [1][2]
+
+1. WHAT THE PREVIOUS PAPER DID
+
+Reference: Sven Goessens (2024), "Predicting the Potential Growth of Football
+Players in the EA Sports FC Games: A Comparative Study on Logistic Regression,
+Random Forest and XGBoost," Tilburg University master's thesis. [1]
+
+1.1 Research question and data
+
+The paper asked whether attributes in the EA Sports FC video game could identify
+players who would later become "high potential" IN THE GAME. It did not establish
+that the game's scores are objective measurements of real-world match performance.
+Its source was Stefano Leone's Kaggle collection, covering editions from 2015
+through 2023. [1, pp. 2, 4–5, 11]
+
+1.2 Cleaning and preparation
+
+- The source included multiple updates for some players within an edition. The
+  study retained the first observation for each player in each year.
+- It removed editions 2015 and 2016 because fewer attributes were available.
+- It excluded goalkeepers because their abilities differ from outfield players.
+- It selected relevant columns and encoded categorical fields such as preferred
+  foot and playable positions. The paper reports 190,231 rows and 49 features
+  after its initial cleaning. Requiring a known three-year future reduced the
+  analysis to 40,669 rows. [1, pp. 11–14]
+
+1.3 The published target
+
+The study calculated differences in player attribute totals over future one-,
+two-, and three-year periods. Its final target was BINARY: a player counted as
+"high potential" only if (a) the total attribute points increased by at least
+89 within the next three years AND (b) the player's Overall rating reached at
+least 76 at some point during 2017–2023. Otherwise the label was zero. The
+paper reports that 6.44% of its final 40,669 observations had the positive
+label. These figures are the study's definitions and sample counts, not results
+measured in my current project. [1, pp. 13–14]
+
+1.4 Models, evaluation and conclusions
+
+The author compared Logistic Regression, Random Forest and XGBoost. The study
+used stratified 10-fold cross-validation, SMOTE in the training folds to address
+class imbalance, feature selection, and hyperparameter tuning. It assessed
+class-specific and macro precision, recall and F1, accuracy, Cohen's kappa and
+confusion matrices. It also examined feature importance and whether splitting
+players by position improved results. The author reported that Random Forest
+identified the high-potential minority class comparatively well, while
+position-based segmentation did not produce a major improvement. These are the
+paper's findings; they are not claims about my proposed model. [1, pp. 2, 17–21,
+35–36]
+
+2. WHAT MY CURRENT LAB PROJECT DOES
+
+The existing Football-Position-Classification repository loads my local
+FIFA_Male_Players_2015_2023.csv (161,583 rows and 110 original columns in the
+recorded run), selects 41 numeric predictors, and maps the first listed player
+position to one of four groups. It trains Random Forest and XGBoost, keeping
+players separated between training and test partitions. Its Flask endpoint
+returns a position-group prediction; the Angular frontend displays that result
+when run locally. GitHub Pages is a static frontend demonstration and does not
+host a live Python inference server. None of this code currently forecasts a
+future player's Overall rating or whether the player will appear next year. [2]
+
+Consequently, my position classifier is a practical lab baseline on the same
+football source, NOT a reproduction of the published paper's high-potential
+target, data filtering, or reported numerical results.
+
+3. PROPOSED NEW RESEARCH IDEA (FUTURE WORK)
+
+Working question: Can a history-aware, two-stage model predict (1) whether an
+EA Sports FC player has a rating in the next edition and, if so, (2) whether
+that next-edition Overall rating rises substantially, stays similar, or falls
+substantially?
+
+The idea in one line: predict whether the player will have a rating in the
+next FIFA/FC edition; then, conditional on a next-edition rating existing,
+predict whether that rating will rise sharply, stay similar, or fall sharply.
+
+3.1 Why a two-stage prediction is needed
+
+For each player observed in edition t, look up the same player ID in edition
+t+1. There are two logically different possible outcomes:
+
+  A. No next-edition record is observed in this dataset: a next-edition
+     Overall rating cannot be computed from the available records.
+  B. A next-edition record exists: compute delta = Overall(t+1) - Overall(t)
+     and classify the change as increase, stable, or decrease.
+
+An absent record is NOT evidence that the player became worse, retired, or
+left professional football. A dataset can omit players for several reasons.
+The model should describe its first-stage result precisely as "record present
+in the next edition" rather than "still playing football."
+
+3.2 Planned data construction
+
+1. Order the available edition snapshots by player_id and fifa_version. Define
+   one documented snapshot per player per edition if the CSV includes updates.
+2. For every usable edition t, construct features only from information
+   available by that edition: current age, Overall, position and skill ratings,
+   plus available prior-edition ratings and their changes. Use a missing-history
+   indicator for a player seen for the first time rather than inventing a past.
+3. Label Stage 1 as 1 if the player's ID appears in t+1 in the dataset, or 0
+   if not. Exclude the final available edition as a starting year, because its
+   next edition is not in this 2015–2023 file.
+4. For Stage 1 positives, define delta in Overall points. Agree on the
+   "substantial" threshold before evaluating on held-out editions. For
+   example, with a threshold of 3 points: delta >= +3 is Increase, delta <= -3
+   is Decrease, and -2 through +2 is Stable. Three points is a PROPOSED
+   definition for investigation, not a measured finding or a claim of
+   statistical significance. Check class balance and run sensitivity analyses
+   with thresholds chosen using training data only.
+5. Check duplicate IDs, missing values and release-to-release changes in
+   feature definitions; document which editions and players remain eligible.
+
+3.3 Planned modelling and comparisons
+
+- Stage 1: train an availability classifier using information known at t.
+- Stage 2: among records with observed t+1 ratings in the training data,
+  train a three-class rating-change classifier. Candidate models include
+  Random Forest and XGBoost, with simple baselines such as a majority class,
+  current age/rating model, and last observed rating-change rule.
+- Compare a history-aware two-stage system against (a) a single-snapshot
+  Stage 2 model and (b) a direct outcome model whose classes include
+  No Next-Edition Record, Increase, Stable, and Decrease. These comparisons
+  help test whether the added stages and history actually add value.
+- Build the final output from the two models: if Stage 1 predicts no observed
+  next-edition record, return that outcome; otherwise report one of the three
+  rating-change classes. Document error propagation from Stage 1 to Stage 2.
+
+3.4 Planned evaluation and leakage controls
+
+Train on earlier editions, tune on a later edition, and test on still later
+editions for which the following edition is actually present. Report the
+edition cutoffs explicitly; do not allow rows from the test future to create
+features, thresholds, imputation values or labels used in training. Account
+for repeated observations of the same player when estimating uncertainty;
+report separate evaluations for previously seen players and new players if
+both appear in the test data.
+
+Assess Stage 1 with a confusion matrix, class-specific precision and recall,
+F1, and area under ROC and precision–recall curves where appropriate. Assess
+Stage 2 with macro F1, per-class precision and recall, balanced accuracy and a
+confusion matrix. Also report end-to-end results for all eligible starting
+records, including the No Next-Edition Record outcome, and compare model
+performance by edition, age band and position. Any claimed improvement must
+be demonstrated on held-out editions, with uncertainty estimates where
+feasible. In-game Potential is itself an EA forecast-like rating; compare
+results with and without it rather than treating it as an unquestioned
+independent predictor.
+
+4. WHAT IS DIFFERENT, AND WHAT HAS NOT YET BEEN PROVEN
+
+The Goessens thesis predicts a three-year binary high-potential label and
+requires known future records for its final sample. My proposed output instead
+explicitly models next-edition record availability and then separates sharp
+increase, stability and sharp decline in the next-edition Overall rating. This
+is a different task definition and proposed evaluation workflow on the same
+Kaggle source. The current GitHub position-classification model is separate
+from both tasks. [1][2]
+
+Do NOT describe one-year forecasting, use of Random Forest/XGBoost, historical
+features, or time-aware evaluation alone as inventions: other football work
+already forecasts one-year player-quality changes with those model families
+and time-series information, using a different data source and quality
+indicator. [3] I cannot confirm that the EXACT two-stage formulation has
+never been published or implemented elsewhere. Before making a publication
+novelty claim, complete a documented literature and repository search and
+compare datasets, targets, eligibility rules, evaluation splits and code.
+
+No Stage 1 or Stage 2 model, outcome threshold, comparative score, discovery,
+or publishable improvement is claimed as completed here. The proposed
+research contribution will depend on empirical results, reproducibility and
+how it compares with the closest existing work.
+
+SOURCES
+
+[1] Goessens, S. (2024). Predicting the Potential Growth of Football Players
+    in the EA Sports FC Games. Tilburg University thesis, especially abstract
+    and Methods sections 4.1–4.5.
+    https://arno.uvt.nl/show.cgi?fid=171209
+
+[2] My existing project: Football Position Classification, README and
+    docs/technical_report.md, plus football_position_classification.py.
+    https://github.com/232028-blip/Football-Position-Classification
+
+[3] van Arem, K. W., Goes-Smit, F., and Söhl, J. Forecasting the Future
+    Development in Quality and Value of Professional Football Players for
+    Applications in Team Management. Especially Methods and Conclusions.
+    https://arxiv.org/html/2502.07528v3
+
+Class source: DevOps Lab manual supplied with this project specifies Semester
+7. Name and Section B were supplied in the conversation context; current
+class/section were confirmed during preparation of this file.

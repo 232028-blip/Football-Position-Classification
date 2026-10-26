@@ -570,6 +570,30 @@ model_bundle = {
 
 joblib.dump(model_bundle, MODEL_PATH)
 
+# Reuse the exact fitted pipeline and training-time encoder for local inference.
+# The API bundle stays local; rebuilding it requires the original dataset.
+deploy_dir = PROJECT_ROOT / "backend" / "models"
+deploy_dir.mkdir(parents=True, exist_ok=True)
+joblib.dump(
+    {
+        "pipeline": best_pipeline,
+        "features": FEATURES,
+        "target_encoder": target_encoder,
+        "task": "classification",
+        "model_version": EXPERIMENT,
+        "model_name": best_model_name,
+        "sklearn_version": sklearn.__version__,
+        "xgboost_version": xgboost.__version__,
+    },
+    deploy_dir / "model_bundle.joblib",
+)
+
+# Prefer a row with all values so the demonstration form can be filled directly.
+sample_candidates = X_test.dropna()
+if sample_candidates.empty:
+    raise ValueError("No fully populated test row available for a sample payload")
+sample_candidates.head(1).to_csv(PROJECT_ROOT / "data" / "sample_inputs.csv", index=False)
+
 print("Model saved successfully:")
 print(MODEL_PATH)
 

@@ -5,3 +5,6 @@ seaborn>=0.13,<1
 joblib>=1.4,<2
 scikit-learn==1.6.1
 xgboost==3.4.1
+flask>=3.1,<4
+requests>=2.32,<3
+pytest>=8,<10

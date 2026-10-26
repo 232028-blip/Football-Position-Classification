@@ -1,77 +1,46 @@
 # Football Position Classification
 
-This project classifies FIFA player snapshots into **Goalkeeper, Defender,
-Midfielder, or Forward** from 41 selected numeric player attributes. It is a
-position-classification experiment, not a prediction of a player's future
-performance. The source project was an existing Google Colab notebook; the
-main script retains its Random Forest and XGBoost settings.
+A local Flask and Angular application for the existing EA Sports FIFA **position classification** project. The fitted Random Forest or XGBoost model classifies one player snapshot as Defender, Forward, Goalkeeper, or Midfielder. Future edition rating prediction is a separate research idea and is not implemented here.
 
-## Dataset
+## Data and model
 
-The included `data/FIFA_Male_Players_2015_2023.csv` was provided with this
-project. Source stated in the original notebook:
-[FIFA 23 complete player dataset on Kaggle](https://www.kaggle.com/datasets/stefanoleone992/fifa-23-complete-player-dataset).
-The source file has 161,583 records and 110 columns. The script selects 41
-inputs and excludes records without a mapped position or player ID. The CSV is
-in the ZIP for local use and is ignored by Git because of its size. The
-original notebook is kept in `notebooks/` for reference.
+- Source: [Stefano Leone's FIFA 23 complete player dataset](https://www.kaggle.com/datasets/stefanoleone992/fifa-23-complete-player-dataset), using the project's 2015–2023 male-player CSV.
+- Existing training script: `football_position_classification.py` (41 numeric inputs, player-grouped split, Random Forest and XGBoost).
+- The form permits absent Goalkeeping Speed and Mentality Composure ratings; the saved imputer fills them as in training.
+- The training script exports `backend/models/model_bundle.joblib` with its fitted preprocessing pipeline, position encoder and exact input order.
+- The full CSV and fitted model are deliberately excluded from Git. The downloadable lab package includes both for local use; a fresh GitHub clone requires the CSV and a training run to recreate its fitted model. Commit only the included numerical sample row and JSON payload.
 
-## Start in VS Code (Windows PowerShell terminal)
+## Run locally
 
-Open **this folder** with VS Code. Select a Python 3.12 interpreter, then run:
+Use Python 3.12, a [Node.js version supported by Angular 22](https://angular.dev/reference/versions), and npm. Open this existing repository in VS Code. Run in PowerShell at the repository root:
 
 ```powershell
+py -0p
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\.venv\Scripts\python.exe football_position_classification.py --experiment baseline
+& ".\.venv\Scripts\python.exe" -m pip install -r backend/requirements.txt
 ```
 
-The first full run trains both models using the same player-grouped split
-(`StratifiedGroupKFold`, first fold of five, approximately 80/20). The script
-checks that a player ID never occurs in both train and test. It writes actual
-model metrics to `output/model_results.csv`, saves charts to `output/`, and
-records train/test gaps in `output/overfitting_results.csv`. It saves the
-winning trained model to `models/football_position_classifier.pkl`.
-The dataset and model stay local when you run `git add .` because `.gitignore`
-excludes `data/` and `models/`.
-
-To compare a collaborator's controlled Random Forest change, edit only
-`max_depth=20` to `max_depth=16` in the script **on a feature branch**, then:
+If `py -3.12` is unavailable, check the interpreters reported by `py -0p`. The pinned XGBoost 3.4.1 requires Python 3.12 or newer; Python 3.11 will not install these requirements. The included model was created on Python 3.12, and cross-version loading has not been verified. The lab package already includes the CSV at `data/FIFA_Male_Players_2015_2023.csv` and a bundle at `backend/models/model_bundle.joblib`, so retraining is optional if the bundle loads in your compatible environment.
 
 ```powershell
-.\.venv\Scripts\python.exe football_position_classification.py --experiment rf-depth-16
+& ".\.venv\Scripts\python.exe" football_position_classification.py --experiment baseline
+& ".\.venv\Scripts\python.exe" backend/make_payload.py
+& ".\.venv\Scripts\python.exe" backend/test_pipeline.py
+& ".\.venv\Scripts\python.exe" -m pytest -q tests/test_utils.py backend/tests
 ```
 
-This appends revised results to the CSV while retaining the baseline results.
-The script rejects an experiment label if the source code still uses the wrong
-Random Forest depth. The XGBoost settings, features, and random seed are kept
-the same. `Training Time` can vary from computer to computer.
+In **Terminal 1**, from the root, run `& ".\.venv\Scripts\python.exe" backend/app.py` and keep it open. In **Terminal 2**:
 
-## Files
+```powershell
+cd frontend
+npm ci
+npm run start -- --proxy-config proxy.conf.json
+```
 
-| Path | Purpose |
-| --- | --- |
-| `football_position_classification.py` | Converted and adapted notebook experiment |
-| `utils.py` | Position mapping used by training and CI test |
-| `tests/test_utils.py` | Small dataset-free unit test |
-| `.github/workflows/python-test.yml` | GitHub Actions CI on pushes and PRs |
-| `output/model_results.csv` | Baseline/revised measured metrics after running |
-| `output/overfitting_results.csv` | Baseline/revised train/test gap diagnostics |
-| `output/*.png` | Generated charts after running |
-| `models/*.pkl` | Generated local model, excluded from Git |
-| `GITHUB_LAB_STEPS.md` | Repository, Issue, collaborator, branch, PR, review, tag, CI exercise |
+Open [http://localhost:4200](http://localhost:4200), click **Fill sample player**, then **Run local prediction**. The dev proxy forwards `/api/predict` to local Flask on port 5000. Terminal 3 can run `npm run build` in `frontend`.
 
-## Evaluation and limitations
+## GitHub lab
 
-The script reports accuracy, macro precision, macro recall, macro F1,
-multiclass one-vs-rest ROC-AUC, classification reports, confusion matrices,
-ROC curves, and train/test metric gaps. A train/test gap is a diagnostic, not
-a proof that a model cannot overfit. A single player-grouped fold should not
-be presented as a full cross-validation study. Use actual figures from
-`output/model_results.csv` when writing the lab report.
+The existing repository is already initialized and has an `origin` remote. New workflows in `.github/workflows/ci.yml` and `.github/workflows/pages.yml` run on a push to `main`; Pages must be configured under **Settings → Pages → Source: GitHub Actions**. The expected static site URL is [232028-blip.github.io/Football-Position-Classification/](https://232028-blip.github.io/Football-Position-Classification/).
 
-## Contributors
-
-- Original author: add your name on GitHub.
-- Lab collaborator: add their name after accepting the repository invitation.
+GitHub Actions checks source/feature alignment and builds Angular. It does not run model-dependent API tests because the fitted artifact is excluded. GitHub Pages hosts the Angular interface **without a Python server** and disables prediction there. Local API results and CI coverage are described in [the technical report](docs/technical_report.md). Keep the original `GITHUB_LAB_STEPS.md` for the earlier collaboration lab.

@@ -1,0 +1,55 @@
+<main class="shell">
+  <header>
+    <p class="eyebrow">EA SPORTS FIFA · 2015–2023 PLAYER ATTRIBUTES</p>
+    <h1>Football position classifier</h1>
+    <p>Enter a player's numeric attributes to classify the position group as Goalkeeper, Defender, Midfielder, or Forward.</p>
+  </header>
+
+  @if (staticDemo) {
+    <aside class="notice" role="status">
+      This GitHub Pages site is a static demonstration. Predictions require the Flask API and Angular running together on your computer.
+    </aside>
+  }
+
+  <div class="toolbar">
+    <h2>Player attributes <span>({{ fields.length }} inputs)</span></h2>
+    <button type="button" class="secondary" (click)="loadExample()">Fill sample player</button>
+  </div>
+  <form (ngSubmit)="submit()" #playerForm="ngForm">
+    <p>Goalkeeping Speed and Mentality Composure can be left empty when the rating is unavailable.</p>
+    @for (group of groups; track group) {
+      <fieldset>
+        <legend>{{ group }}</legend>
+        <div class="grid">
+          @for (field of fieldsIn(group); track field.name) {
+            <label [for]="field.name">
+              {{ field.label }}
+              <input [id]="field.name" [name]="field.name" type="number" step="any"
+                [min]="field.min" [max]="field.max" [required]="field.required"
+                [(ngModel)]="values[field.name]" />
+            </label>
+          }
+        </div>
+      </fieldset>
+    }
+    <button type="submit" [disabled]="staticDemo || loading || playerForm.invalid">
+      {{ loading ? 'Predicting…' : 'Run local prediction' }}
+    </button>
+  </form>
+
+  @if (error) { <p class="error" role="alert">{{ error }}</p> }
+  @if (result) {
+    <section class="result" aria-live="polite">
+      <h2>Predicted position: {{ result.prediction }}</h2>
+      <p>Model: {{ result.model_name }}</p>
+      @if (result.probabilities) {
+        <ul>
+          @for (position of result.classes; track position; let i = $index) {
+            <li>{{ position }}: {{ (result.probabilities[i] * 100).toFixed(1) }}%</li>
+          }
+        </ul>
+      }
+      <p>{{ result.disclaimer }}</p>
+    </section>
+  }
+</main>

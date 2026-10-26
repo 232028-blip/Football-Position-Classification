@@ -11,8 +11,15 @@ __pycache__/
 
 # Keep the public CSV and generated serialized model in the downloadable ZIP,
 # but do not stage them in GitHub by default.
-data/
+data/*
+!data/sample_inputs.csv
 models/
+backend/models/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.cache/
+*.tsbuildinfo
 
 # OS files
 .DS_Store
